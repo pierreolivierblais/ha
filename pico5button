@@ -6,9 +6,7 @@ blueprint:
     for the raise/lower buttons. It allows for control over the brightness step percentage and transition speed and the assignment
     of any action to the middle button.
   source_url: https://gist.github.com/cymone-smart/9814a750a0d0cfb196fa1fa7ae3630bb
-
   domain: automation
-
   input:
     pico_1:
       name: Pico Device
