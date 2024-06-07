@@ -118,59 +118,65 @@ condition: []
 
 action:
   - choose:
-    - conditions:
-        - condition: trigger
-          id: middle_button_pressed
-      sequence:
-        - choose:
-            - conditions: 
-                - condition: state
+      - conditions:
+          - condition: trigger
+            id: middle_button_pressed
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: input_boolean.middle_button_double_press
+                    state: 'on'
+                sequence:
+                  - service: input_boolean.turn_off
+                    entity_id: input_boolean.middle_button_double_press
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ middle_button_double_press_action != none }}"
+                        sequence: !input middle_button_double_press_action
+                      default:
+                        - service: notify.notify
+                          data:
+                            message: "Double press detected on {{ trigger.entity_id }}"
+              default:
+                - service: input_boolean.turn_on
                   entity_id: input_boolean.middle_button_double_press
-                  state: 'on'
-              sequence:
-                - service: input_boolean.turn_off
-                  entity_id: input_boolean.middle_button_double_press
+                - delay:
+                    milliseconds: !input double_press_delay
                 - choose:
-                    - conditions: "{{ middle_button_double_press_action != none }}"
-                      sequence: !input middle_button_double_press_action
-                    default:
-                      - service: notify.notify
-                        data:
-                          message: "Double press detected on {{ trigger.entity_id }}"
-            default:
-              - service: input_boolean.turn_on
-                entity_id: input_boolean.middle_button_double_press
-              - delay:
-                  milliseconds: !input double_press_delay
-              - choose:
-                  - conditions: 
-                      - condition: state
-                        entity_id: input_boolean.middle_button_double_press
-                        state: 'on'
-                    sequence:
-                      - service: input_boolean.turn_off
-                        entity_id: input_boolean.middle_button_double_press
-                      - choose:
-                          - conditions: "{{ middle_button_action != none }}"
-                            sequence: !input middle_button_action
-                          default:
-                            - service: light.turn_on
-                              data:
-                                transition: !input transition_on
-                                brightness_pct: 80
-                                kelvin: 2700
-                              target:
-                                entity_id: !input entity
-    - conditions:
-        - condition: trigger
-          id: long_press_detected
-      sequence:
-        - choose:
-            - conditions: "{{ middle_button_long_press_action != none }}"
-              sequence: !input middle_button_long_press_action
-            default:
-              - service: notify.notify
-                data:
-                  message: "Long press detected on {{ trigger.entity_id }}"
+                    - conditions:
+                        - condition: state
+                          entity_id: input_boolean.middle_button_double_press
+                          state: 'on'
+                      sequence:
+                        - service: input_boolean.turn_off
+                          entity_id: input_boolean.middle_button_double_press
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ middle_button_action != none }}"
+                              sequence: !input middle_button_action
+                            default:
+                              - service: light.turn_on
+                                data:
+                                  transition: !input transition_on
+                                  brightness_pct: 80
+                                  kelvin: 2700
+                                target:
+                                  entity_id: !input entity
+      - conditions:
+          - condition: trigger
+            id: long_press_detected
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ middle_button_long_press_action != none }}"
+                sequence: !input middle_button_long_press_action
+              default:
+                - service: notify.notify
+                  data:
+                    message: "Long press detected on {{ trigger.entity_id }}"
 
 mode: restart
