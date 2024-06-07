@@ -1,38 +1,27 @@
 blueprint:
-  name: Lutron Pico 5 Button - Custom Press Control
-  description: "This blueprint provides custom handling for long press and double press on the middle button of a Lutron Pico 5 Button remote, utilizing timers to differentiate press types."
+  name: Lutron Pico Middle Button - Long Press and Double Press
+  description: "This blueprint handles long press and double press functionalities for the middle button of a Lutron Pico 5 Button remote, using timers to differentiate press types."
   domain: automation
   input:
     pico_1:
       name: Pico Device
-      description: "Pico remote to associate with light entity."
-    entity:
-      name: Light Entity(ies)
-      description: "Light entity to control."
+      description: "Pico remote to associate with these actions."
       selector:
-        entity:
-          domain: light
-          multiple: true
-    transition_on:
-      name: On Transition
-      description: "The duration in seconds for the light entity to transition on."
+        device:
+          integration: lutron_caseta
+          manufacturer: Lutron
+    middle_button_long_press_action:
+      name: Long Press Action
+      description: "Action(s) to execute when the middle button is long pressed."
       selector:
-        number:
-          min: 0
-          max: 15
-          unit_of_measurement: seconds
-      default: 1
-    transition_off:
-      name: Off Transition
-      description: "The duration in seconds for the light entity to transition off."
+        action: {}
+    middle_button_double_press_action:
+      name: Double Press Action
+      description: "Action(s) to execute when the middle button is double pressed."
       selector:
-        number:
-          min: 0
-          max: 15
-          unit_of_measurement: seconds
-      default: 2
+        action: {}
     middle_button_long_press_delay:
-      name: Middle Button Long Press Delay
+      name: Long Press Delay
       description: "Delay in milliseconds to recognize a long press on the middle button."
       selector:
         number:
@@ -41,7 +30,7 @@ blueprint:
           unit_of_measurement: milliseconds
       default: 1000
     middle_button_double_press_delay:
-      name: Middle Button Double Press Delay
+      name: Double Press Delay
       description: "Maximum delay between presses to recognize a double press on the middle button."
       selector:
         number:
@@ -64,39 +53,29 @@ action:
   - choose:
       - conditions:
           - condition: state
-            entity_id: !input timer_entity_id
+            entity_id: timer.middle_button_timer
             state: 'active'
         sequence:
           - service: timer.cancel
             target:
-              entity_id: !input timer_entity_id
-          - service: light.toggle
-            target:
-              entity_id: !input entity
+              entity_id: timer.middle_button_timer
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ (now() - as_timestamp(states.timer.middle_button_timer.last_changed) | default(0)) * 1000 < states('input_number.middle_button_double_press_delay') | int }}"
+                sequence: !input middle_button_double_press_action
       default:
         - service: timer.start
           target:
-            entity_id: !input timer_entity_id
+            entity_id: timer.middle_button_timer
           data:
-            duration: "{{ states('input_number.middle_button_double_press_delay') | int / 1000 }}"
+            duration: "{{ (states('input_number.middle_button_double_press_delay') | int / 1000) | string }}"
         - delay:
             milliseconds: "{{ states('input_number.middle_button_long_press_delay') | int }}"
         - choose:
             - conditions:
                 - condition: state
-                  entity_id: !input timer_entity_id
+                  entity_id: timer.middle_button_timer
                   state: 'idle'
-              sequence:
-                - service: light.turn_on
-                  target:
-                    entity_id: !input entity
-                  data:
-                    brightness_pct: 50
-            default:
-              - service: light.turn_on
-                target:
-                  entity_id: !input entity
-                data:
-                  brightness_pct: 20
-
+              sequence: !input middle_button_long_press_action
 mode: restart
