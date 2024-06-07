@@ -70,6 +70,12 @@ blueprint:
       selector:
         action: {}
       default:
+    middle_button_long_press_action:
+      name: Middle (Favorite) Button Long Press Override
+      description: "Action(s) to execute when MIDDLE button is long pressed."
+      selector:
+        action: {}
+      default:
 
 trigger:
   - platform: device
@@ -124,6 +130,7 @@ variables:
   step: !input step
   speed: !input speed
   middle_button_action: !input middle_button_action
+  middle_button_long_press_action: !input middle_button_long_press_action
 
 condition: []
 
@@ -217,8 +224,12 @@ action:
         - condition: trigger
           id: long_press_detected
       sequence:
-        - service: notify.notify
-          data:
-            message: "Long press detected on {{ trigger.entity_id }}"
+        - choose:
+          - conditions: "{{ middle_button_long_press_action != none }}"
+            sequence: !input middle_button_long_press_action
+          default:
+            - service: notify.notify
+              data:
+                message: "Long press detected on {{ trigger.entity_id }}"
 
 mode: restart
