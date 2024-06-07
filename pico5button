@@ -78,19 +78,19 @@ blueprint:
       description: "Action(s) to execute when MIDDLE button is pressed. If left blank, action will default to setting the light entity to a brightness 80% and color temperature 2700."
       selector:
         action: {}
-      default:
+      default: []
     middle_button_long_press_action:
       name: Middle (Favorite) Button Long Press Override
       description: "Action(s) to execute when MIDDLE button is long pressed."
       selector:
         action: {}
-      default:
+      default: []
     middle_button_double_press_action:
       name: Middle (Favorite) Button Double Press Override
       description: "Action(s) to execute when MIDDLE button is double pressed."
       selector:
         action: {}
-      default:
+      default: []
 
 trigger:
   - platform: device
@@ -133,7 +133,7 @@ action:
                   - choose:
                       - conditions:
                           - condition: template
-                            value_template: "{{ middle_button_double_press_action != none }}"
+                            value_template: "{{ middle_button_double_press_action | length > 0 }}"
                         sequence: !input middle_button_double_press_action
                       default:
                         - service: notify.notify
@@ -155,7 +155,7 @@ action:
                         - choose:
                             - conditions:
                                 - condition: template
-                                  value_template: "{{ middle_button_action != none }}"
+                                  value_template: "{{ middle_button_action | length > 0 }}"
                               sequence: !input middle_button_action
                             default:
                               - service: light.turn_on
@@ -172,7 +172,7 @@ action:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ middle_button_long_press_action != none }}"
+                    value_template: "{{ middle_button_long_press_action | length > 0 }}"
                 sequence: !input middle_button_long_press_action
               default:
                 - service: notify.notify
