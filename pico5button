@@ -1,6 +1,3 @@
-Here is the YAML configuration updated to include the long press option for the remote, allowing you to configure the long press delay:
-
-```yaml
 blueprint:
   name: Lutron Pico 5 Button - Light Entity Control
   description: "This blueprint allows for the association of a Lutron Pico 5 Button (model PJ2-3BRL-GXX-X01) remote with a light entity. It is designed to simulate the operation of a standard Lutron Caseta wall dimmer including the press and hold functionality for the raise/lower buttons. It allows for the control over the brightness step percentage and transition speed and the assignment of any action to the middle button."
