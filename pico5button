@@ -222,4 +222,3 @@ action:
             message: "Long press detected on {{ trigger.entity_id }}"
 
 mode: restart
-```
