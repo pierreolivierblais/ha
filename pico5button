@@ -64,6 +64,15 @@ blueprint:
           max: 2000
           unit_of_measurement: milliseconds
       default: 1000
+    double_press_delay:
+      name: Double Press Delay
+      description: "The maximum delay in milliseconds between two presses to consider it a double press."
+      selector:
+        number:
+          min: 50
+          max: 500
+          unit_of_measurement: milliseconds
+      default: 250
     middle_button_action:
       name: Middle (Favorite) Button Override
       description: "Action(s) to execute when MIDDLE button is pressed. If left blank, action will default to setting the light entity to a brightness 80% and color temperature 2700."
@@ -76,50 +85,20 @@ blueprint:
       selector:
         action: {}
       default:
+    middle_button_double_press_action:
+      name: Middle (Favorite) Button Double Press Override
+      description: "Action(s) to execute when MIDDLE button is double pressed."
+      selector:
+        action: {}
+      default:
 
 trigger:
   - platform: device
     device_id: !input pico_1
     domain: lutron_caseta
     type: press
-    subtype: 'on'
-    id: on_pressed
-  - platform: device
-    device_id: !input pico_1
-    domain: lutron_caseta
-    type: press
-    subtype: 'raise'
-    id: up_pressed
-  - platform: device
-    device_id: !input pico_1
-    domain: lutron_caseta
-    type: release
-    subtype: 'raise'
-    id: up_released
-  - platform: device
-    device_id: !input pico_1
-    domain: lutron_caseta
-    type: press
     subtype: 'stop'
-    id: stop_pressed
-  - platform: device
-    device_id: !input pico_1
-    domain: lutron_caseta
-    type: press
-    subtype: 'lower'
-    id: down_pressed
-  - platform: device
-    device_id: !input pico_1
-    domain: lutron_caseta
-    type: release
-    subtype: 'lower'
-    id: down_released
-  - platform: device
-    device_id: !input pico_1
-    domain: lutron_caseta
-    type: press
-    subtype: 'off'
-    id: off_pressed
+    id: middle_button_pressed
   - platform: state
     entity_id: !input pico_1
     for:
@@ -129,8 +108,11 @@ trigger:
 variables:
   step: !input step
   speed: !input speed
+  long_press_delay: !input long_press_delay
+  double_press_delay: !input double_press_delay
   middle_button_action: !input middle_button_action
   middle_button_long_press_action: !input middle_button_long_press_action
+  middle_button_double_press_action: !input middle_button_double_press_action
 
 condition: []
 
@@ -138,98 +120,57 @@ action:
   - choose:
     - conditions:
         - condition: trigger
-          id: on_pressed
-      sequence:
-        - service: light.turn_on
-          data:
-            transition: !input transition_on
-            brightness_pct: 100
-          target:
-            entity_id: !input entity
-    - conditions:
-        - condition: trigger
-          id: up_pressed
-      sequence:
-        - repeat:
-            sequence:
-              - service: light.turn_on
-                data:
-                  brightness_step_pct: !input step
-                  transition: "{{ speed / 1000 }}"
-                target:
-                  entity_id: !input entity
-              - delay:
-                  milliseconds: !input speed
-            until:
-              - condition: state
-                entity_id: !input entity
-                attribute: brightness
-                state: "100"
-    - conditions:
-        - condition: trigger
-          id: up_released
-      sequence:
-        - delay:
-            milliseconds: 100
-    - conditions:
-        - condition: trigger
-          id: stop_pressed
+          id: middle_button_pressed
       sequence:
         - choose:
-          - conditions: "{{ middle_button_action != none }}"
-            sequence: !input middle_button_action
-          default:
-            - service: light.turn_on
-              data:
-                transition: !input transition_on
-                brightness_pct: 80
-                kelvin: 2700
-              target:
-                entity_id: !input entity
-    - conditions:
-        - condition: trigger
-          id: down_pressed
-      sequence:
-        - repeat:
-            sequence:
-              - service: light.turn_on
-                data:
-                  brightness_step_pct: "{{ step * -1 }}"
-                  transition: "{{ speed / 1000 }}"
-                target:
-                  entity_id: !input entity
+            - conditions: 
+                - condition: state
+                  entity_id: input_boolean.middle_button_double_press
+                  state: 'on'
+              sequence:
+                - service: input_boolean.turn_off
+                  entity_id: input_boolean.middle_button_double_press
+                - choose:
+                    - conditions: "{{ middle_button_double_press_action != none }}"
+                      sequence: !input middle_button_double_press_action
+                    default:
+                      - service: notify.notify
+                        data:
+                          message: "Double press detected on {{ trigger.entity_id }}"
+            default:
+              - service: input_boolean.turn_on
+                entity_id: input_boolean.middle_button_double_press
               - delay:
-                  milliseconds: !input speed
-            until:
-              - condition: numeric_state
-                entity_id: !input entity
-                attribute: brightness
-                below: 1
-    - conditions:
-        - condition: trigger
-          id: down_released
-      sequence:
-        - delay:
-            milliseconds: 100
-    - conditions:
-        - condition: trigger
-          id: off_pressed
-      sequence:
-        - service: light.turn_off
-          data:
-            transition: !input transition_off
-          target:
-            entity_id: !input entity
+                  milliseconds: !input double_press_delay
+              - choose:
+                  - conditions: 
+                      - condition: state
+                        entity_id: input_boolean.middle_button_double_press
+                        state: 'on'
+                    sequence:
+                      - service: input_boolean.turn_off
+                        entity_id: input_boolean.middle_button_double_press
+                      - choose:
+                          - conditions: "{{ middle_button_action != none }}"
+                            sequence: !input middle_button_action
+                          default:
+                            - service: light.turn_on
+                              data:
+                                transition: !input transition_on
+                                brightness_pct: 80
+                                kelvin: 2700
+                              target:
+                                entity_id: !input entity
     - conditions:
         - condition: trigger
           id: long_press_detected
       sequence:
         - choose:
-          - conditions: "{{ middle_button_long_press_action != none }}"
-            sequence: !input middle_button_long_press_action
-          default:
-            - service: notify.notify
-              data:
-                message: "Long press detected on {{ trigger.entity_id }}"
+            - conditions: "{{ middle_button_long_press_action != none }}"
+              sequence: !input middle_button_long_press_action
+            default:
+              - service: notify.notify
+                data:
+                  message: "Long press detected on {{ trigger.entity_id }}"
 
 mode: restart
