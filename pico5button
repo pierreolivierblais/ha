@@ -21,7 +21,7 @@ blueprint:
           multiple: true
     transition_on:
       name: On Transition
-      description: "The duration in seconds for the light entity to transiton on."
+      description: "The duration in seconds for the light entity to transition on."
       selector:
         number:
           min: 0
@@ -30,7 +30,7 @@ blueprint:
       default: 1
     transition_off:
       name: Off Transition
-      description: "The duration in seconds for the light entity to transiton off."
+      description: "The duration in seconds for the light entity to transition off."
       selector:
         number:
           min: 0
