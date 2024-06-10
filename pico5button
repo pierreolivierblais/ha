@@ -11,6 +11,7 @@ blueprint:
       selector:
         device:
           model: PJ2-3BRL-GXX-X01 (Pico3ButtonRaiseLower)
+          multiple: false
     lamp_entity_1:
       name: First Lamp Entity
       description: First lamp entity to control.
@@ -154,10 +155,17 @@ action:
                       brightness_step_pct: 2
                     target:
                       entity_id: !input lamp_entity_2
-              - default:
+              - conditions:
+                  - condition: state
+                    entity_id: !input lamp_entity_1
+                    state: 'off'
+                  - condition: state
+                    entity_id: !input lamp_entity_2
+                    state: 'off'
+                sequence:
                   - service: light.turn_on
                     data:
-                      brightness_step_pct: 2
+                      brightness: 2
                     target:
                       entity_id:
                         - !input lamp_entity_1
