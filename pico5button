@@ -11,7 +11,6 @@ blueprint:
       selector:
         device:
           model: PJ2-3BRL-GXX-X01 (Pico3ButtonRaiseLower)
-          multiple: false
     lamp_entity_1:
       name: First Lamp Entity
       description: First lamp entity to control.
@@ -155,51 +154,75 @@ action:
                       brightness_step_pct: 2
                     target:
                       entity_id: !input lamp_entity_2
+              - default:
+                  - service: light.turn_on
+                    data:
+                      brightness_step_pct: 2
+                    target:
+                      entity_id:
+                        - !input lamp_entity_1
+                        - !input lamp_entity_2
       - conditions:
           - condition: trigger
             id: lower_pressed
         sequence:
           - repeat:
               sequence:
-                - service: light.turn_on
-                  data_template:
-                    brightness_step_pct: -2
-                    transition: "{{ off_transition }}"
-                  target:
-                    entity_id: "{{ entity_id if is_state(entity_id, 'on') }}"
+                - choose:
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_1
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: -2
+                          target:
+                            entity_id: !input lamp_entity_1
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_2
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: -2
+                          target:
+                            entity_id: !input lamp_entity_2
                 - delay:
                     milliseconds: 100
               until:
                 - condition: template
-                  value_template: "{{ state_attr(entity_id, 'brightness') | int <= 0 }}"
-            target:
-              entity_id: "{{ entity_id if is_state(entity_id, 'on') }}"
+                  value_template: >
+                    {{ state_attr(trigger.entity_id, 'brightness') | int <= 0 }}
       - conditions:
           - condition: trigger
             id: middle_pressed
         sequence:
           - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ middle_button_action != none }}"
-        sequence: 
-          - !input middle_button_action
-          - default:
-              - service: light.turn_on
-                data:
-                  brightness_pct: 80
-                  kelvin: 2700
-                target:
-                  entity_id:
-                    - !input lamp_entity_1
-                    - !input lamp_entity_2
+              - conditions:
+                  - condition: template
+                    value_template: "{{ middle_button_action != none }}"
+                sequence: !input middle_button_action
+              default:
+                - service: light.turn_on
+                  data:
+                    brightness_pct: 80
+                    kelvin: 2700
+                  target:
+                    entity_id:
+                      - !input lamp_entity_1
+                      - !input lamp_entity_2
       - conditions:
           - condition: trigger
             id: middle_held
         sequence:
           - delay:
               seconds: !input hold_duration
-          - execute:
-              - !input middle_button_hold
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ middle_button_hold != none }}"
+                sequence: !input middle_button_hold
 
 mode: restart
