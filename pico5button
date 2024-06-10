@@ -182,8 +182,9 @@ action:
       - conditions:
           - condition: template
             value_template: "{{ middle_button_action != none }}"
-        sequence: !input middle_button_action
-            default:
+        sequence: 
+          - !input middle_button_action
+          - default:
               - service: light.turn_on
                 data:
                   brightness_pct: 80
