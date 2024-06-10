@@ -1,81 +1,204 @@
 blueprint:
-  name: Lutron Pico Middle Button - Long Press and Double Press
-  description: "This blueprint handles long press and double press functionalities for the middle button of a Lutron Pico 5 Button remote, using timers to differentiate press types."
+  name: Custom Lutron Pico 5 PO - Dual Lamp Control
+  description: >
+    Control two lamps with a Lutron Pico 5 Button remote, with custom logic for brightness adjustments and extended functionality for the middle button.
+  source_url: https://gist.github.com/cymone-smart/9814a750a0d0cfb196fa1fa7ae3630bb
   domain: automation
   input:
-    pico_1:
-      name: Pico Device
-      description: "Pico remote to associate with these actions."
+    pico_remote:
+      name: Pico Remote Device
+      description: Pico remote to associate with two lamp entities.
       selector:
         device:
-          integration: lutron_caseta
-          manufacturer: Lutron
-    middle_button_long_press_action:
-      name: Long Press Action
-      description: "Action(s) to execute when the middle button is long pressed."
+          model: PJ2-3BRL-GXX-X01
+          multiple: false
+    lamp_entity_1:
+      name: First Lamp Entity
+      description: First lamp entity to control.
       selector:
-        action: {}
-    middle_button_double_press_action:
-      name: Double Press Action
-      description: "Action(s) to execute when the middle button is double pressed."
+        entity:
+          domain: light
+    lamp_entity_2:
+      name: Second Lamp Entity
+      description: Second lamp entity to control.
       selector:
-        action: {}
-    middle_button_long_press_delay:
-      name: Long Press Delay
-      description: "Delay in milliseconds to recognize a long press on the middle button."
-      selector:
-        number:
-          min: 500
-          max: 5000
-          unit_of_measurement: milliseconds
-      default: 1000
-    middle_button_double_press_delay:
-      name: Double Press Delay
-      description: "Maximum delay between presses to recognize a double press on the middle button."
+        entity:
+          domain: light
+    on_transition:
+      name: On Transition Duration
+      description: Duration in seconds for the lamps to transition on.
       selector:
         number:
-          min: 50
-          max: 1000
-          unit_of_measurement: milliseconds
-      default: 500
+          min: 0
+          max: 15
+          unit_of_measurement: 'seconds'
+          mode: slider
+          step: 1
+      default: 1
+    off_transition:
+      name: Off Transition Duration
+      description: Duration in seconds for the lamps to transition off.
+      selector:
+        number:
+          min: 0
+          max: 15
+          unit_of_measurement: 'seconds'
+          mode: slider
+          step: 1
+      default: 2
+    middle_button_action:
+      name: Middle Button Single Press Action
+      description: Action to execute when the middle button is pressed.
+      selector:
+        action: {}
+    middle_button_hold:
+      name: Middle Button Hold Action
+      description: Actions to execute when the middle button is held.
+      selector:
+        action: {}
+    hold_duration:
+      name: Hold Duration
+      description: Duration in seconds to hold the middle button before the action takes place.
+      selector:
+        number:
+          min: 1
+          max: 10
+          unit_of_measurement: 'seconds'
+          mode: slider
+          step: 1
+      default: 3
 
 trigger:
   - platform: device
-    device_id: !input pico_1
+    device_id: !input pico_remote
     domain: lutron_caseta
     type: press
-    subtype: 'middle'
+    subtype: "on"
+    id: on_pressed
+  - platform: device
+    device_id: !input pico_remote
+    domain: lutron_caseta
+    type: press
+    subtype: "off"
+    id: off_pressed
+  - platform: device
+    device_id: !input pico_remote
+    domain: lutron_caseta
+    type: press
+    subtype: "raise"
+    id: raise_pressed
+  - platform: device
+    device_id: !input pico_remote
+    domain: lutron_caseta
+    type: press
+    subtype: "lower"
+    id: lower_pressed
+  - platform: device
+    device_id: !input pico_remote
+    domain: lutron_caseta
+    type: press
+    subtype: "middle"
     id: middle_pressed
+  - platform: device
+    device_id: !input pico_remote
+    domain: lutron_caseta
+    type: hold
+    subtype: "middle"
+    id: middle_held
 
 action:
-  - variables:
-      timer_entity_id: "timer.middle_button_timer"
   - choose:
       - conditions:
-          - condition: state
-            entity_id: timer.middle_button_timer
-            state: 'active'
+          - condition: trigger
+            id: on_pressed
         sequence:
-          - service: timer.cancel
+          - service: light.turn_on
+            data:
+              transition: !input on_transition
             target:
-              entity_id: timer.middle_button_timer
+              entity_id:
+                - !input lamp_entity_1
+                - !input lamp_entity_2
+      - conditions:
+          - condition: trigger
+            id: off_pressed
+        sequence:
+          - service: light.turn_off
+            data:
+              transition: !input off_transition
+            target:
+              entity_id:
+                - !input lamp_entity_1
+                - !input lamp_entity_2
+      - conditions:
+          - condition: trigger
+            id: raise_pressed
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: !input lamp_entity_1
+                    state: 'on'
+                sequence:
+                  - service: light.turn_on
+                    data:
+                      brightness_step_pct: 2
+                    target:
+                      entity_id: !input lamp_entity_1
+              - conditions:
+                  - condition: state
+                    entity_id: !input lamp_entity_2
+                    state: 'on'
+                sequence:
+                  - service: light.turn_on
+                    data:
+                      brightness_step_pct: 2
+                    target:
+                      entity_id: !input lamp_entity_2
+      - conditions:
+          - condition: trigger
+            id: lower_pressed
+        sequence:
+          - repeat:
+              sequence:
+                - service: light.turn_on
+                  data_template:
+                    brightness_step_pct: -2
+                    transition: "{{ off_transition }}"
+                  target:
+                    entity_id: "{{ entity_id if is_state(entity_id, 'on') }}"
+                - delay:
+                    milliseconds: 100
+              until:
+                - condition: template
+                  value_template: "{{ state_attr(entity_id, 'brightness') | int <= 0 }}"
+            target:
+              entity_id: "{{ entity_id if is_state(entity_id, 'on') }}"
+      - conditions:
+          - condition: trigger
+            id: middle_pressed
+        sequence:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ (now() - as_timestamp(states.timer.middle_button_timer.last_changed) | default(0)) * 1000 < states('input_number.middle_button_double_press_delay') | int }}"
-                sequence: !input middle_button_double_press_action
-      default:
-        - service: timer.start
-          target:
-            entity_id: timer.middle_button_timer
-          data:
-            duration: "{{ (states('input_number.middle_button_double_press_delay') | int / 1000) | string }}"
-        - delay:
-            milliseconds: "{{ states('input_number.middle_button_long_press_delay') | int }}"
-        - choose:
-            - conditions:
-                - condition: state
-                  entity_id: timer.middle_button_timer
-                  state: 'idle'
-              sequence: !input middle_button_long_press_action
+                    value_template: "{{ middle_button_action != none }}"
+              sequence: !input middle_button_action
+            default:
+              - service: light.turn_on
+                data:
+                  brightness_pct: 80
+                  kelvin: 2700
+                target:
+                  entity_id:
+                    - !input lamp_entity_1
+                    - !input lamp_entity_2
+      - conditions:
+          - condition: trigger
+            id: middle_held
+        sequence:
+          - delay:
+              seconds: !input hold_duration
+          - execute:
+              - !input middle_button_hold
+
 mode: restart
