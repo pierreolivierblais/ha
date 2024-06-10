@@ -90,9 +90,21 @@ trigger:
   - platform: device
     device_id: !input pico_1
     domain: lutron_caseta
+    type: release
+    subtype: "raise"
+    id: raise_released
+  - platform: device
+    device_id: !input pico_1
+    domain: lutron_caseta
     type: press
     subtype: "lower"
     id: lower_pressed
+  - platform: device
+    device_id: !input pico_1
+    domain: lutron_caseta
+    type: release
+    subtype: "lower"
+    id: lower_released
   - platform: device
     device_id: !input pico_1
     domain: lutron_caseta
@@ -105,6 +117,12 @@ trigger:
     type: hold
     subtype: "middle"
     id: middle_held
+
+variables:
+  is_raising: false
+  is_lowering: false
+
+condition: []
 
 action:
   - choose:
@@ -134,18 +152,74 @@ action:
           - condition: trigger
             id: raise_pressed
         sequence:
-          - service: script.raise_lamps_brightness
-            data:
-              lamp_entity_1: !input lamp_entity_1
-              lamp_entity_2: !input lamp_entity_2
+          - repeat:
+              while:
+                - condition: state
+                  entity_id: !input pico_1
+                  state: 'on'
+              sequence:
+                - choose:
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_1
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: 2
+                          target:
+                            entity_id: !input lamp_entity_1
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_2
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: 2
+                          target:
+                            entity_id: !input lamp_entity_2
+                - delay: 100ms
+      - conditions:
+          - condition: trigger
+            id: raise_released
+        sequence: []
       - conditions:
           - condition: trigger
             id: lower_pressed
         sequence:
-          - service: script.lower_lamps_brightness
-            data:
-              lamp_entity_1: !input lamp_entity_1
-              lamp_entity_2: !input lamp_entity_2
+          - repeat:
+              while:
+                - condition: state
+                  entity_id: !input pico_1
+                  state: 'on'
+              sequence:
+                - choose:
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_1
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: -2
+                          target:
+                            entity_id: !input lamp_entity_1
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_2
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: -2
+                          target:
+                            entity_id: !input lamp_entity_2
+                - delay: 100ms
+      - conditions:
+          - condition: trigger
+            id: lower_released
+        sequence: []
       - conditions:
           - condition: trigger
             id: middle_pressed
@@ -176,4 +250,5 @@ action:
                     value_template: "{{ middle_button_hold != none }}"
                 sequence: !input middle_button_hold
 
-mode: restart
+mode: parallel
+max_exceeded: stop
