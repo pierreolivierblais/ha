@@ -5,9 +5,9 @@ blueprint:
   source_url: https://gist.github.com/cymone-smart/9814a750a0d0cfb196fa1fa7ae3630bb
   domain: automation
   input:
-    pico_remote:
+    pico_1:
       name: Pico Device
-      description: Pico remote to associate with two lamp entities.
+      description: Pico remote to associate with light entity.
       selector:
         device:
           model: PJ2-3BRL-GXX-X01 (Pico3ButtonRaiseLower)
@@ -70,37 +70,37 @@ blueprint:
 
 trigger:
   - platform: device
-    device_id: !input pico_remote
+    device_id: !input pico_1
     domain: lutron_caseta
     type: press
     subtype: "on"
     id: on_pressed
   - platform: device
-    device_id: !input pico_remote
+    device_id: !input pico_1
     domain: lutron_caseta
     type: press
     subtype: "off"
     id: off_pressed
   - platform: device
-    device_id: !input pico_remote
+    device_id: !input pico_1
     domain: lutron_caseta
     type: press
     subtype: "raise"
     id: raise_pressed
   - platform: device
-    device_id: !input pico_remote
+    device_id: !input pico_1
     domain: lutron_caseta
     type: press
     subtype: "lower"
     id: lower_pressed
   - platform: device
-    device_id: !input pico_remote
+    device_id: !input pico_1
     domain: lutron_caseta
     type: press
     subtype: "middle"
     id: middle_pressed
   - platform: device
-    device_id: !input pico_remote
+    device_id: !input pico_1
     domain: lutron_caseta
     type: hold
     subtype: "middle"
