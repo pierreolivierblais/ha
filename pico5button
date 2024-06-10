@@ -31,7 +31,7 @@ blueprint:
         number:
           min: 0
           max: 15
-          unit_of_measurement: 'seconds'
+          unit_of_measurement: seconds
           mode: slider
           step: 1
       default: 1
@@ -42,7 +42,7 @@ blueprint:
         number:
           min: 0
           max: 15
-          unit_of_measurement: 'seconds'
+          unit_of_measurement: seconds
           mode: slider
           step: 1
       default: 2
@@ -63,7 +63,7 @@ blueprint:
         number:
           min: 1
           max: 10
-          unit_of_measurement: 'seconds'
+          unit_of_measurement: seconds
           mode: slider
           step: 1
       default: 3
@@ -146,30 +146,66 @@ action:
           - condition: trigger
             id: raise_pressed
         sequence:
-          - service: script.turn_on
-            data:
-              entity_id: script.raise_lamps_brightness
-      - conditions:
-          - condition: trigger
-            id: raise_released
-        sequence:
-          - service: script.turn_off
-            data:
-              entity_id: script.raise_lamps_brightness
+          - repeat:
+              while:
+                - condition: state
+                  entity_id: !input pico_1
+                  state: 'on'
+              sequence:
+                - choose:
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_1
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: 2
+                          target:
+                            entity_id: !input lamp_entity_1
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_2
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: 2
+                          target:
+                            entity_id: !input lamp_entity_2
+                - delay: 100ms
       - conditions:
           - condition: trigger
             id: lower_pressed
         sequence:
-          - service: script.turn_on
-            data:
-              entity_id: script.lower_lamps_brightness
-      - conditions:
-          - condition: trigger
-            id: lower_released
-        sequence:
-          - service: script.turn_off
-            data:
-              entity_id: script.lower_lamps_brightness
+          - repeat:
+              while:
+                - condition: state
+                  entity_id: !input pico_1
+                  state: 'on'
+              sequence:
+                - choose:
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_1
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: -2
+                          target:
+                            entity_id: !input lamp_entity_1
+                    - conditions:
+                        - condition: state
+                          entity_id: !input lamp_entity_2
+                          state: 'on'
+                      sequence:
+                        - service: light.turn_on
+                          data:
+                            brightness_step_pct: -2
+                          target:
+                            entity_id: !input lamp_entity_2
+                - delay: 100ms
       - conditions:
           - condition: trigger
             id: middle_pressed
@@ -200,5 +236,4 @@ action:
                     value_template: "{{ middle_button_hold != none }}"
                 sequence: !input middle_button_hold
 
-mode: parallel
-max_exceeded: stop
+mode: restart
